@@ -1,0 +1,5 @@
+nombre: Rosita
+creador: Juha
+licencia: MIT
+
+-- Creado con: https://www.planetminecraft.com/skin-editor/ en local.
