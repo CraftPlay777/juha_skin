@@ -1,14 +1,16 @@
--- juha_skin | juha_game (CraftPlay777)
--- Selector de skins como pestaña sfinv de minetest_game
+-- juha_skin | Juha (CraftPlay777)
+-- Selector de skins: pestaña sfinv (opcional) + comando /juha_skin
 
 juha_skin      = {}
 juha_skin.list = {}
 juha_skin.cur  = {}
 
-local MODPATH  = minetest.get_modpath("juha_skin")
-local PER_PAGE = 10
+local MODPATH   = minetest.get_modpath("juha_skin")
+local PER_PAGE  = 10
+local HAS_SFINV = minetest.get_modpath("sfinv") ~= nil
+local cmd_page  = {}
 
--- carga skins desde /skins/*.txt
+-- skins
 local function load_skins()
     local dir   = MODPATH .. "/skins/"
     local files = minetest.get_dir_list(dir, false)
@@ -41,7 +43,7 @@ end
 
 load_skins()
 
--- aplica skin: cuerpo, mano e hijos
+-- aplica
 function juha_skin.apply(player, skin_id)
     local name  = player:get_player_name()
     local valid = false
@@ -91,25 +93,24 @@ function juha_skin.get_tex(name)
     return "juha_skin_" .. juha_skin.get_id(name) .. ".png"
 end
 
--- construye el contenido de la pestaña
+-- grilla
 local COLS    = 5
 local CW      = 1.5
 local CH      = 2.2
 local START_X = 0.1
 local START_Y = 0.3
 
-local function build_tab(player, context)
+local function build_tab(player, page)
     local name     = player:get_player_name()
     local total    = #juha_skin.list
     local max_page = math.max(1, math.ceil(total / PER_PAGE))
-    local page     = context.jskin_page or 1
     local cur      = juha_skin.get_id(name)
     local fs       = ""
 
     if page > 1 then
         fs = fs .. "button[0.1,4.6;1.4,0.5;jskin_prev;< Ant]"
     end
-    fs = fs .. "label[1.7,4.8;Pág " .. page .. "/" .. max_page .. "]"
+    fs = fs .. "label[1.7,4.8;Pag " .. page .. "/" .. max_page .. "]"
     if page < max_page then
         fs = fs .. "button[3.0,4.6;1.4,0.5;jskin_next;Sig >]"
     end
@@ -149,44 +150,93 @@ local function build_tab(player, context)
     return fs
 end
 
--- pestaña en sfinv (minetest_game)
-sfinv.register_page("juha_skin:skins", {
-    title = "Skins",
+-- menú comando
+local FS_CMD = "juha_skin:cmd"
 
-    get = function(self, player, context)
-        context.jskin_page = context.jskin_page or 1
-        return sfinv.make_formspec(player, context,
-            build_tab(player, context), true)
-    end,
+local function show_cmd_form(player)
+    local name = player:get_player_name()
+    local page = cmd_page[name] or 1
+    local fs   = "formspec_version[4]"
+              .. "size[7.8,5.4]"
+              .. "label[0.1,0.1;Skins]"
+              .. build_tab(player, page)
+    minetest.show_formspec(name, FS_CMD, fs)
+end
 
-    on_player_receive_fields = function(self, player, context, fields)
-        local page     = context.jskin_page or 1
-        local max_page = math.max(1, math.ceil(#juha_skin.list / PER_PAGE))
-        local changed  = false
+minetest.register_on_player_receive_fields(function(player, formname, fields)
+    if formname ~= FS_CMD then return end
+    local name     = player:get_player_name()
+    local page     = cmd_page[name] or 1
+    local max_page = math.max(1, math.ceil(#juha_skin.list / PER_PAGE))
 
-        if fields.jskin_prev then
-            context.jskin_page = math.max(1, page - 1)
-            changed = true
-        elseif fields.jskin_next then
-            context.jskin_page = math.min(max_page, page + 1)
-            changed = true
-        else
-            for _, skin in ipairs(juha_skin.list) do
-                if fields["jskin_" .. skin.id] then
-                    juha_skin.apply(player, skin.id)
-                    changed = true
-                    break
-                end
+    if fields.jskin_prev then
+        cmd_page[name] = math.max(1, page - 1)
+        show_cmd_form(player)
+    elseif fields.jskin_next then
+        cmd_page[name] = math.min(max_page, page + 1)
+        show_cmd_form(player)
+    elseif not fields.quit then
+        for _, skin in ipairs(juha_skin.list) do
+            if fields["jskin_" .. skin.id] then
+                juha_skin.apply(player, skin.id)
+                show_cmd_form(player)
+                break
             end
         end
+    end
+end)
 
-        if changed then
-            sfinv.set_player_inventory_formspec(player, context)
-        end
+minetest.register_chatcommand("juha_skin", {
+    description = "Abre el selector de skins",
+    func = function(name)
+        local player = minetest.get_player_by_name(name)
+        if not player then return false, "Jugador no encontrado." end
+        cmd_page[name] = cmd_page[name] or 1
+        show_cmd_form(player)
+        return true
     end,
 })
 
--- persistencia al conectar
+-- sfinv
+if HAS_SFINV then
+    sfinv.register_page("juha_skin:skins", {
+        title = "Skins",
+
+        get = function(self, player, context)
+            context.jskin_page = context.jskin_page or 1
+            return sfinv.make_formspec(player, context,
+                build_tab(player, context.jskin_page), true)
+        end,
+
+        on_player_receive_fields = function(self, player, context, fields)
+            local page     = context.jskin_page or 1
+            local max_page = math.max(1, math.ceil(#juha_skin.list / PER_PAGE))
+            local changed  = false
+
+            if fields.jskin_prev then
+                context.jskin_page = math.max(1, page - 1)
+                changed = true
+            elseif fields.jskin_next then
+                context.jskin_page = math.min(max_page, page + 1)
+                changed = true
+            else
+                for _, skin in ipairs(juha_skin.list) do
+                    if fields["jskin_" .. skin.id] then
+                        juha_skin.apply(player, skin.id)
+                        changed = true
+                        break
+                    end
+                end
+            end
+
+            if changed then
+                sfinv.set_player_inventory_formspec(player, context)
+            end
+        end,
+    })
+end
+
+-- persistencia
 minetest.register_on_joinplayer(function(player)
     minetest.after(1.2, function()
         local p = minetest.get_player_by_name(player:get_player_name())
@@ -204,7 +254,8 @@ minetest.register_on_joinplayer(function(player)
     end)
 end)
 
--- limpieza al salir
 minetest.register_on_leaveplayer(function(player)
-    juha_skin.cur[player:get_player_name()] = nil
+    local name = player:get_player_name()
+    juha_skin.cur[name] = nil
+    cmd_page[name]      = nil
 end)

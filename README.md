@@ -1,78 +1,66 @@
 # juha_skin
+Skin selector for [Luanti](https://www.luanti.org/) — accessible via command or inventory tab (optional).
 
-Mod para [minetest](https://www.luanti.org/) que permite a los jugadores elegir su skin desde una pestaña del inventario de Minetest Game.
 
----
+## Command
 
-## Características
+```
+/juha_skin
+```
 
-- Pestaña "Skins" integrada al inventario de Minetest Game vía `sfinv`
-- Soporte para múltiples skins con paginación
-- Resalta la skin activa del jugador
-- Persistencia entre sesiones
-- Tooltips con nombre, creador y licencia de cada skin
+## Usage
+| Mod | Required |
+|-----|----------|
+| `player_api` | Yes |
+| `sfinv` | No (Minetest Game only) |
 
----
-
-## Dependencias
-
-| Mod | Tipo |
-|-----|------|
-| `player_api` | Requerida |
-| `sfinv` | Requerida (incluida en Minetest Game) |
-
----
-
-## Instalación
-
-1. Copiar la carpeta `juha_skin` en el directorio `mods/` de tu mundo o juego.
-2. Asegurarse de que `player_api` y `sfinv` estén activos.
-3. Activar el mod desde el menú de configuración del mundo.
+- Opens a grid with all available skins
+- Highlights the player's active skin
+- Supports pagination
+- Tooltips show name, author and license per skin
+- Skin choice persists across sessions
 
 ---
 
-## Agregar skins
+## Modes
 
-Cada skin requiere dos archivos de textura y un archivo de metadatos:
+### Command
+Available in any game. Run `/juha_skin` to open the selector directly.
+
+### Inventory tab
+If `sfinv` is present (Minetest Game), a **Skins** tab is added to the player inventory automatically.
+
+---
+
+## Adding skins
+Place two textures and one metadata file per skin:
 
 ```
 juha_skin/
 ├── textures/
-│   ├── juha_skin_<id>.png       -- textura plana (aplicada al modelo)
-│   └── juha_skin_<id>_ver.png   -- vista previa vertical (mostrada en el selector)
+│   ├── juha_skin_<id>.png        -- flat texture (applied to model)
+│   └── juha_skin_<id>_ver.png    -- vertical preview (shown in selector)
 └── skins/
-    └── <id>.txt                 -- metadatos de la skin
+    └── <id>.txt                  -- skin metadata
 ```
 
-### Formato del archivo `.txt`
-
+**`<id>.txt` format:**
 ```
-nombre: Mi Skin
-creador: TuNombre
+nombre: My Skin
+creador: YourName
 licencia: MIT
 ```
 
----
-
-## API pública
-
+## API
 ```lua
--- aplica una skin al jugador
-juha_skin.apply(player, skin_id)  -- devuelve true/false
-
--- obtiene el id de la skin activa de un jugador
-juha_skin.get_id(name)  -- devuelve string
-
--- obtiene el nombre de la textura activa de un jugador
-juha_skin.get_tex(name)  -- devuelve "juha_skin_<id>.png"
+juha_skin.apply(player, skin_id)  -- applies a skin, returns true/false
+juha_skin.get_id(name)            -- returns the active skin id
+juha_skin.get_tex(name)           -- returns "juha_skin_<id>.png"
 ```
 
----
+## Notes
+- `sfinv` is optional — if absent, use `/juha_skin` instead
+- No errors are thrown when `sfinv` is missing
 
-## Licencia
-
-MIT — ver [LICENSE](LICENSE)
-
-## Créditos
-
-Juha (CraftPlay777)
+**Author:** Juha (CraftPlay777)
+**License:** MIT
